@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scoring Fragilité — Bien-Autonome</title>
+<style>
+  :root {
+    --bleu:       #1A3A5C;
+    --bleu-m:     #2E6DA4;
+    --bleu-clair: #D6E8F7;
+    --vert:       #2E7D32;
+    --vert-clair: #E8F5E9;
+    --orange:     #E65100;
+    --orange-cl:  #FFF3E0;
+    --rouge:      #C62828;
+    --rouge-cl:   #FFEBEE;
+    --gris:       #F5F5F5;
+    --gris-b:     #E0E0E0;
+    --blanc:      #FFFFFF;
+    --texte:      #212121;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 15px;
+    color: var(--texte);
+    background: #ECEFF1;
+    padding: 12px;
+  }
+
+  /* ─── Header ─── */
+  .header {
+    background: var(--bleu);
+    color: white;
+    padding: 16px 18px;
+    border-radius: 12px 12px 0 0;
+    text-align: center;
+  }
+  .header h1 { font-size: 17px; font-weight: 700; letter-spacing: .3px; }
+  .header p  { font-size: 12px; color: var(--bleu-clair); margin-top: 4px; }
+
+  /* ─── Identité ─── */
+  .identite {
+    background: var(--bleu-clair);
+    padding: 14px 16px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  @media (max-width: 540px) { .identite { grid-template-columns: 1fr; } }
+  .field label { font-size: 12px; font-weight: 600; color: var(--bleu); display: block; margin-bottom: 4px; }
+  .field input, .field select {
+    width: 100%; padding: 8px 10px; border: 1.5px solid var(--gris-b);
+    border-radius: 7px; font-size: 14px; background: white;
+    color: var(--texte);
+  }
+  .field input:focus, .field select:focus { outline: none; border-color: var(--bleu-m); }
+
+  /* ─── Carte section ─── */
+  .card {
+    background: white;
+    border-radius: 0;
+    overflow: hidden;
+    margin-top: 2px;
+  }
+  .card:last-of-type { border-radius: 0 0 12px 12px; }
+
+  .section-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .section-title .num {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 14px; color: white; flex-shrink: 0;
+  }
+  .section-title h2 { font-size: 14px; font-weight: 700; flex: 1; }
+  .section-title .badge {
+    font-size: 12px; font-weight: 600; padding: 3px 8px;
+    border-radius: 20px; white-space: nowrap;
+  }
+  .section-title .chevron { font-size: 13px; color: #888; transition: transform .2s; }
+  .section-title.open .chevron { transform: rotate(180deg); }
+
+  .section-body { padding: 14px 16px; display: none; }
+  .section-body.open { display: block; }
+
+  /* Couleurs par section */
+  .s-gfst   .section-title { background: #EEF4FB; }
+  .s-gfst   .num  { background: var(--bleu-m); }
+  .s-gfst   .badge { background: var(--bleu-clair); color: var(--bleu); }
+
+  .s-sppb   .section-title { background: #EDF7EE; }
+  .s-sppb   .num  { background: var(--vert); }
+  .s-sppb   .badge { background: var(--vert-clair); color: var(--vert); }
+
+  .s-mna    .section-title { background: #FFF8F0; }
+  .s-mna    .num  { background: var(--orange); }
+  .s-mna    .badge { background: var(--orange-cl); color: var(--orange); }
+
+  .s-synthese .section-title { background: #FEECEC; }
+  .s-synthese .num  { background: var(--rouge); }
+  .s-synthese .badge { background: var(--rouge-cl); color: var(--rouge); }
+
+  /* ─── Items de questions ─── */
+  .q-item {
+    padding: 10px 0;
+    border-bottom: 1px solid var(--gris-b);
+  }
+  .q-item:last-child { border-bottom: none; }
+  .q-label { font-size: 13px; font-weight: 600; color: var(--texte); margin-bottom: 6px; }
+  .q-sub   { font-size: 11px; color: #666; margin-bottom: 6px; }
+
+  /* Radio / checkbox custom */
+  .options { display: flex; flex-wrap: wrap; gap: 6px; }
+  .opt-btn {
+    display: flex; align-items: center; gap: 6px;
+    padding: 7px 12px; border: 1.5px solid var(--gris-b);
+    border-radius: 20px; cursor: pointer; font-size: 13px;
+    background: var(--gris); transition: all .15s;
+    user-select: none;
+  }
+  .opt-btn input { display: none; }
+  .opt-btn:hover { border-color: var(--bleu-m); background: var(--bleu-clair); }
+  .opt-btn.selected { border-color: var(--bleu-m); background: var(--bleu-clair); color: var(--bleu); font-weight: 600; }
+  .opt-btn .pts { font-size: 11px; color: #888; }
+  .opt-btn.selected .pts { color: var(--bleu-m); }
+
+  /* Oui/Non spécial */
+  .yn-wrap { display: flex; gap: 8px; }
+  .yn-btn {
+    flex: 1; padding: 9px; border: 1.5px solid var(--gris-b);
+    border-radius: 8px; cursor: pointer; text-align: center;
+    font-size: 14px; font-weight: 600; background: var(--gris);
+    transition: all .15s;
+  }
+  .yn-btn:hover { border-color: var(--bleu-m); }
+  .yn-btn.yes.selected { background: #E8F5E9; border-color: var(--vert); color: var(--vert); }
+  .yn-btn.no.selected  { background: #FEECEC; border-color: var(--rouge); color: var(--rouge); }
+
+  /* Input numérique */
+  .time-input {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .time-input label { font-size: 13px; color: #555; }
+  .time-input input[type=number] {
+    width: 80px; padding: 8px; border: 1.5px solid var(--gris-b);
+    border-radius: 7px; font-size: 15px; text-align: center;
+  }
+  .time-input input:focus { outline: none; border-color: var(--bleu-m); }
+  .time-input .unit { font-size: 12px; color: #888; }
+
+  /* Score inline */
+  .score-chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 10px; border-radius: 20px;
+    font-size: 12px; font-weight: 600; margin-top: 8px;
+  }
+  .score-chip.neutral  { background: var(--gris);       color: #555; }
+  .score-chip.good     { background: var(--vert-clair);  color: var(--vert); }
+  .score-chip.warn     { background: var(--orange-cl);   color: var(--orange); }
+  .score-chip.alert    { background: var(--rouge-cl);    color: var(--rouge); }
+
+  /* ─── Synthèse ─── */
+  .synth-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px;
+  }
+  @media (max-width: 400px) { .synth-grid { grid-template-columns: 1fr; } }
+  .synth-box {
+    padding: 12px; border-radius: 10px; text-align: center; border: 2px solid transparent;
+  }
+  .synth-box .tool-name { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
+  .synth-box .score-val { font-size: 26px; font-weight: 800; }
+  .synth-box .score-max { font-size: 13px; color: #888; }
+  .synth-box .interp    { font-size: 11px; margin-top: 4px; font-weight: 600; }
+
+  .profil-global {
+    padding: 14px; border-radius: 10px; text-align: center;
+    margin-bottom: 14px; font-size: 16px; font-weight: 700;
+  }
+
+  /* Checkboxes actions */
+  .actions-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px;
+  }
+  @media (max-width: 460px) { .actions-grid { grid-template-columns: 1fr; } }
+  .action-cb {
+    display: flex; align-items: center; gap: 8px;
+    padding: 9px 10px; border: 1.5px solid var(--gris-b);
+    border-radius: 8px; cursor: pointer; font-size: 13px;
+    background: var(--gris); transition: all .15s;
+  }
+  .action-cb input { width: 16px; height: 16px; cursor: pointer; accent-color: var(--bleu-m); }
+  .action-cb.checked { border-color: var(--bleu-m); background: var(--bleu-clair); }
+
+  textarea {
+    width: 100%; padding: 10px; border: 1.5px solid var(--gris-b);
+    border-radius: 8px; font-size: 13px; resize: vertical; min-height: 70px;
+    font-family: inherit; color: var(--texte);
+  }
+  textarea:focus { outline: none; border-color: var(--bleu-m); }
+
+  /* ─── Boutons ─── */
+  .btn-row { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+  .btn {
+    flex: 1; min-width: 120px; padding: 13px;
+    border: none; border-radius: 10px; font-size: 14px;
+    font-weight: 700; cursor: pointer; transition: opacity .15s;
+  }
+  .btn:hover { opacity: .88; }
+  .btn-primary { background: var(--bleu); color: white; }
+  .btn-reset   { background: var(--gris); color: #555; border: 1.5px solid var(--gris-b); }
+  .btn-print   { background: var(--vert); color: white; }
+
+  /* ─── Print ─── */
+  @media print {
+    body { background: white; padding: 0; font-size: 12px; }
+    .btn-row, .chevron { display: none !important; }
+    .section-body { display: block !important; }
+    .card { box-shadow: none; }
+    .opt-btn.selected { border: 2px solid #333; background: #eee; }
+    .yn-btn.selected  { border: 2px solid #333; }
+  }
+
+  /* ─── Alerte flottante ─── */
+  .toast {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: var(--bleu); color: white; padding: 10px 20px;
+    border-radius: 20px; font-size: 13px; font-weight: 600;
+    opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 999;
+  }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <h1>🏠 Repérage de la Fragilité à Domicile</h1>
+  <p>Bien-Autonome — GFST · SPPB · MNA-SF</p>
+</div>
+
+<!-- IDENTITÉ -->
+<div class="identite">
+  <div class="field">
+    <label>Bénéficiaire</label>
+    <input type="text" id="beneficiaire" placeholder="Nom, prénom">
+  </div>
+  <div class="field">
+    <label>Date de naissance</label>
+    <input type="date" id="ddn">
+  </div>
+  <div class="field">
+    <label>Date de l'évaluation</label>
+    <input type="date" id="date-eval" value="">
+  </div>
+  <div class="field">
+    <label>GIR actuel</label>
+    <select id="gir">
+      <option value="">— sélectionner —</option>
+      <option>GIR 1</option><option>GIR 2</option><option>GIR 3</option>
+      <option>GIR 4</option><option>GIR 5</option><option>GIR 6</option>
+    </select>
+  </div>
+  <div class="field">
+    <label>Évaluateur</label>
+    <input type="text" id="evaluateur" placeholder="Votre nom">
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- SECTION 1 — GFST                            -->
+<!-- ════════════════════════════════════════════ -->
+<div class="card s-gfst">
+  <div class="section-title open" onclick="toggle(this)">
+    <div class="num">①</div>
+    <h2>GFST — Gérontopôle Frailty Screening Tool</h2>
+    <span class="badge" id="badge-gfst">/ 6</span>
+    <span class="chevron">▾</span>
+  </div>
+  <div class="section-body open">
+
+    <div class="q-item">
+      <div class="q-label">Question préalable</div>
+      <div class="q-sub">Le médecin traitant ou vous-même estimez-vous que ce patient présente des signes de fragilité ?</div>
+      <div class="yn-wrap">
+        <div class="yn-btn yes" onclick="setYN(this,'gfst-pre','oui')">✓ OUI</div>
+        <div class="yn-btn no"  onclick="setYN(this,'gfst-pre','non')">✗ NON</div>
+      </div>
+      <div id="gfst-pre-info" style="display:none;margin-top:8px;font-size:12px;color:var(--orange);font-weight:600;">
+        ⚠ Si NON, évaluation GFST non pertinente — passez au SPPB.
+      </div>
+    </div>
+
+    <div id="gfst-items">
+      <div class="q-label" style="margin:10px 0 6px;font-size:12px;color:#555;">
+        Le patient se plaint-il spontanément de... ?
+      </div>
+
+      <!-- 6 items -->
+      <div class="q-item">
+        <div class="q-label">1. Fatigue inhabituelle</div>
+        <div class="yn-wrap">
+          <div class="yn-btn yes" data-gfst="1" onclick="setGFST(this,1,1)">✓ OUI</div>
+          <div class="yn-btn no"  data-gfst="1" onclick="setGFST(this,1,0)">✗ NON</div>
+        </div>
+      </div>
+      <div class="q-item">
+        <div class="q-label">2. Difficultés à monter un étage ou marcher 400 m</div>
+        <div class="yn-wrap">
+          <div class="yn-btn yes" data-gfst="2" onclick="setGFST(this,2,1)">✓ OUI</div>
+          <div class="yn-btn no"  data-gfst="2" onclick="setGFST(this,2,0)">✗ NON</div>
+        </div>
+      </div>
+      <div class="q-item">
+        <div class="q-label">3. Perte de poids involontaire</div>
+        <div class="q-sub">> 4 kg en 1 an ou > 2 kg en 6 mois</div>
+        <div class="yn-wrap">
+          <div class="yn-btn yes" data-gfst="3" onclick="setGFST(this,3,1)">✓ OUI</div>
+          <div class="yn-btn no"  data-gfst="3" onclick="setGFST(this,3,0)">✗ NON</div>
+        </div>
+      </div>
+      <div class="q-item">
+        <div class="q-label">4. Plaintes mnésiques (mémoire)</div>
+        <div class="yn-wrap">
+          <div class="yn-btn yes" data-gfst="4" onclick="setGFST(this,4,1)">✓ OUI</div>
+          <div class="yn-btn no"  data-gfst="4" onclick="setGFST(this,4,0)">✗ NON</div>
+        </div>
+      </div>
+      <div class="q-item">
+        <div class="q-label">5. Réduction des activités / sorties moins fréquentes</div>
+        <div class="yn-wrap">
+          <div class="yn-btn yes" data-gfst="5" onclick="setGFST(this,5,1)">✓ OUI</div>
+          <div class="yn-btn no"  data-gfst="5" onclick="setGFST(this,5,0)">✗ NON</div>
+        </div>
+      </div>
+      <div class="q-item">
+        <div class="q-label">6. Perte d'appétit</div>
+        <div class="yn-wrap">
+          <div class="yn-btn yes" data-gfst="6" onclick="setGFST(this,6,1)">✓ OUI</div>
+          <div class="yn-btn no"  data-gfst="6" onclick="setGFST(this,6,0)">✗ NON</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="score-gfst-chip" class="score-chip neutral" style="margin-top:12px;">Score GFST : — / 6</div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- SECTION 2 — SPPB                            -->
+<!-- ════════════════════════════════════════════ -->
+<div class="card s-sppb">
+  <div class="section-title" onclick="toggle(this)">
+    <div class="num">②</div>
+    <h2>SPPB — Short Physical Performance Battery</h2>
+    <span class="badge" id="badge-sppb">/ 12</span>
+    <span class="chevron">▾</span>
+  </div>
+  <div class="section-body">
+
+    <p style="font-size:12px;color:#666;margin-bottom:12px;">⚠ Espace de 4 m minimum requis. Chrono obligatoire. Chaussures habituelles du bénéficiaire.</p>
+
+    <!-- A. Équilibre -->
+    <div class="q-item">
+      <div class="q-label">A — Équilibre statique (10 sec chaque position)</div>
+      <div class="q-sub">Réaliser dans l'ordre ↓ — stopper si position non tenue</div>
+
+      <div class="q-item" style="padding:6px 0;">
+        <div class="q-label" style="font-weight:500;">1. Pieds joints (side-by-side)</div>
+        <div class="yn-wrap">
+          <div class="yn-btn yes" onclick="setSPPB_eq(this,'eq1',1)">✓ Tenu 10 sec</div>
+          <div class="yn-btn no"  onclick="setSPPB_eq(this,'eq1',0)">✗ Non tenu</div>
+        </div>
+      </div>
+      <div class="q-item" style="padding:6px 0;">
+        <div class="q-label" style="font-weight:500;">2. Semi-tandem (talon d'un pied à hauteur du 1er orteil de l'autre)</div>
+        <div class="yn-wrap">
+          <div class="yn-btn yes" onclick="setSPPB_eq(this,'eq2',1)">✓ Tenu 10 sec</div>
+          <div class="yn-btn no"  onclick="setSPPB_eq(this,'eq2',0)">✗ Non tenu</div>
+        </div>
+      </div>
+      <div class="q-item" style="padding:6px 0;">
+        <div class="q-label" style="font-weight:500;">3. Tandem complet (talon du pied avant touchant l'orteil du pied arrière)</div>
+        <div class="yn-wrap">
+          <div class="yn-btn yes" onclick="setSPPB_eq(this,'eq3',1)">✓ Tenu 10 sec</div>
+          <div class="yn-btn no"  onclick="setSPPB_eq(this,'eq3',0)">✗ Non tenu</div>
+        </div>
+      </div>
+      <div id="score-eq-chip" class="score-chip neutral">Équilibre : — / 3</div>
+    </div>
+
+    <!-- B. Vitesse de marche -->
+    <div class="q-item">
+      <div class="q-label">B — Vitesse de marche (4 mètres, allure normale)</div>
+      <div class="q-sub">Faire 2 essais — noter les 2 temps</div>
+      <div class="time-input" style="gap:12px;flex-wrap:wrap;">
+        <div>
+          <label>Essai 1</label><br>
+          <div style="display:flex;align-items:center;gap:6px;margin-top:4px;">
+            <input type="number" id="vm1" placeholder="0.0" step="0.1" min="0" oninput="calcVM()">
+            <span class="unit">sec</span>
+          </div>
+        </div>
+        <div>
+          <label>Essai 2</label><br>
+          <div style="display:flex;align-items:center;gap:6px;margin-top:4px;">
+            <input type="number" id="vm2" placeholder="0.0" step="0.1" min="0" oninput="calcVM()">
+            <span class="unit">sec</span>
+          </div>
+        </div>
+        <div>
+          <label>Moyenne</label><br>
+          <div style="display:flex;align-items:center;gap:6px;margin-top:4px;">
+            <input type="number" id="vm-moy" placeholder="—" readonly style="background:#f5f5f5;color:#555;">
+            <span class="unit">sec</span>
+          </div>
+        </div>
+      </div>
+      <div id="score-vm-chip" class="score-chip neutral" style="margin-top:8px;">Marche : — / 4</div>
+      <div id="vm-grid" style="font-size:11px;color:#888;margin-top:6px;">
+        Barème : &lt;4,82s = 4pts · 4,82–6,20s = 3pts · 6,21–8,70s = 2pts · &gt;8,70s = 1pt · Non réalisé = 0pt
+      </div>
+    </div>
+
+    <!-- C. Lever de chaise -->
+    <div class="q-item">
+      <div class="q-label">C — Lever de chaise × 5 (sans les bras)</div>
+      <div class="q-sub">Chronomètre déclenché au signal — stopper quand debout la 5e fois</div>
+      <div class="time-input" style="margin-top:6px;">
+        <input type="number" id="lc" placeholder="0.0" step="0.1" min="0" oninput="calcLC()">
+        <span class="unit">secondes</span>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+          <input type="checkbox" id="lc-impossible" onchange="calcLC()" style="width:16px;height:16px;accent-color:var(--rouge);">
+          Non réalisé
+        </label>
+      </div>
+      <div id="score-lc-chip" class="score-chip neutral" style="margin-top:8px;">Lever chaise : — / 4</div>
+      <div style="font-size:11px;color:#888;margin-top:6px;">
+        Barème : &lt;11,2s = 4pts · 11,2–13,7s = 3pts · 13,8–16,7s = 2pts · &gt;16,7s = 1pt · Non réalisé = 0pt
+      </div>
+    </div>
+
+    <div id="score-sppb-chip" class="score-chip neutral" style="margin-top:12px;font-size:14px;font-weight:700;">Score SPPB total : — / 12</div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- SECTION 3 — MNA-SF                          -->
+<!-- ════════════════════════════════════════════ -->
+<div class="card s-mna">
+  <div class="section-title" onclick="toggle(this)">
+    <div class="num">③</div>
+    <h2>MNA-SF — Mini Nutritional Assessment</h2>
+    <span class="badge" id="badge-mna">/ 14</span>
+    <span class="chevron">▾</span>
+  </div>
+  <div class="section-body">
+
+    <!-- A -->
+    <div class="q-item">
+      <div class="q-label">A — Réduction des apports alimentaires (3 derniers mois)</div>
+      <div class="q-sub">Due à perte d'appétit, problèmes digestifs, difficultés à mâcher ou avaler</div>
+      <div class="options">
+        <label class="opt-btn" onclick="selectOpt(this,'mna-a',0)"><input type="radio" name="mna-a"> Réduction sévère <span class="pts">0 pt</span></label>
+        <label class="opt-btn" onclick="selectOpt(this,'mna-a',1)"><input type="radio" name="mna-a"> Réduction modérée <span class="pts">1 pt</span></label>
+        <label class="opt-btn" onclick="selectOpt(this,'mna-a',2)"><input type="radio" name="mna-a"> Pas de réduction <span class="pts">2 pts</span></label>
+      </div>
+    </div>
+
+    <!-- B -->
+    <div class="q-item">
+      <div class="q-label">B — Perte de poids (3 derniers mois)</div>
+      <div class="options">
+        <label class="opt-btn" onclick="selectOpt(this,'mna-b',0)"><input type="radio" name="mna-b"> > 3 kg <span class="pts">0 pt</span></label>
+        <label class="opt-btn" onclick="selectOpt(this,'mna-b',1)"><input type="radio" name="mna-b"> Ne sait pas <span class="pts">1 pt</span></label>
+        <label class="opt-btn" onclick="selectOpt(this,'mna-b',2)"><input type="radio" name="mna-b"> Entre 1 et 3 kg <span class="pts">2 pts</span></label>
+        <label class="opt-btn" onclick="selectOpt(this,'mna-b',3)"><input type="radio" name="mna-b"> Pas de perte <span class="pts">3 pts</span></label>
+      </div>
+    </div>
+
+    <!-- C -->
+    <div class="q-item">
+      <div class="q-label">C — Motricité / déplacements</div>
+      <div class="options">
+        <label class="opt-btn" onclick="selectOpt(this,'mna-c',0)"><input type="radio" name="mna-c"> Lit / fauteuil seulement <span class="pts">0 pt</span></label>
+        <label class="opt-btn" onclick="selectOpt(this,'mna-c',1)"><input type="radio" name="mna-c"> Autonome à l'intérieur <span class="pts">1 pt</span></label>
+        <label class="opt-btn" onclick="selectOpt(this,'mna-c',2)"><input type="radio" name="mna-c"> Sort du domicile <span class="pts">2 pts</span></label>
+      </div>
+    </div>
+
+    <!-- D -->
+    <div class="q-item">
+      <div class="q-label">D — Maladie aiguë ou stress psychologique (3 derniers mois)</div>
+      <div class="options">
+        <label class="opt-btn" onclick="selectOpt(this,'mna-d',0)"><input type="radio" name="mna-d"> Oui <span class="pts">0 pt</span></label>
+        <label class="opt-btn" onclick="selectOpt(this,'mna-d',2)"><input type="radio" name="mna-d"> Non <span class="pts">2 pts</span></label>
+      </div>
+    </div>
+
+    <!-- E -->
+    <div class="q-item">
+      <div class="q-label">E — Problèmes neuropsychologiques</div>
+      <div class="options">
+        <label class="opt-btn" onclick="selectOpt(this,'mna-e',0)"><input type="radio" name="mna-e"> Démence / dépression sévère <span class="pts">0 pt</span></label>
+        <label class="opt-btn" onclick="selectOpt(this,'mna-e',1)"><input type="radio" name="mna-e"> Démence légère <span class="pts">1 pt</span></label>
+        <label class="opt-btn" onclick="selectOpt(this,'mna-e',2)"><input type="radio" name="mna-e"> Pas de problème <span class="pts">2 pts</span></label>
+      </div>
+    </div>
+
+    <!-- F1 / F2 -->
+    <div class="q-item">
+      <div class="q-label">F — Corpulence</div>
+      <div class="q-sub">Utiliser F1 si vous connaissez le poids et la taille, sinon F2 (tour de mollet)</div>
+
+      <div style="margin-bottom:10px;">
+        <div style="font-size:13px;font-weight:600;margin-bottom:6px;">F1 — IMC (kg/m²)</div>
+        <div class="time-input" style="gap:12px;flex-wrap:wrap;">
+          <div>
+            <label>Poids (kg)</label><br>
+            <input type="number" id="poids" placeholder="ex: 62" step="0.1" min="0" oninput="calcIMC()" style="width:80px;padding:8px;border:1.5px solid var(--gris-b);border-radius:7px;font-size:15px;margin-top:4px;">
+          </div>
+          <div>
+            <label>Taille (cm)</label><br>
+            <input type="number" id="taille" placeholder="ex: 165" step="1" min="0" oninput="calcIMC()" style="width:80px;padding:8px;border:1.5px solid var(--gris-b);border-radius:7px;font-size:15px;margin-top:4px;">
+          </div>
+          <div>
+            <label>IMC calculé</label><br>
+            <input type="number" id="imc-val" readonly placeholder="—" style="width:80px;padding:8px;border:1.5px solid var(--gris-b);border-radius:7px;font-size:15px;background:#f5f5f5;color:#555;margin-top:4px;">
+          </div>
+        </div>
+        <div class="options" style="margin-top:8px;" id="f1-options">
+          <label class="opt-btn" onclick="selectOpt(this,'mna-f1',0);setF('f1')"><input type="radio" name="mna-f"> IMC &lt; 19 <span class="pts">0 pt</span></label>
+          <label class="opt-btn" onclick="selectOpt(this,'mna-f1',1);setF('f1')"><input type="radio" name="mna-f"> 19 – 21 <span class="pts">1 pt</span></label>
+          <label class="opt-btn" onclick="selectOpt(this,'mna-f1',2);setF('f1')"><input type="radio" name="mna-f"> 21 – 23 <span class="pts">2 pts</span></label>
+          <label class="opt-btn" onclick="selectOpt(this,'mna-f1',3);setF('f1')"><input type="radio" name="mna-f"> ≥ 23 <span class="pts">3 pts</span></label>
+        </div>
+      </div>
+
+      <div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:6px;">F2 — Tour de mollet (si IMC indisponible)</div>
+        <div class="options">
+          <label class="opt-btn" onclick="selectOpt(this,'mna-f2',0);setF('f2')"><input type="radio" name="mna-f"> &lt; 31 cm <span class="pts">0 pt</span></label>
+          <label class="opt-btn" onclick="selectOpt(this,'mna-f2',3);setF('f2')"><input type="radio" name="mna-f"> ≥ 31 cm <span class="pts">3 pts</span></label>
+        </div>
+      </div>
+    </div>
+
+    <div id="score-mna-chip" class="score-chip neutral" style="margin-top:12px;">Score MNA-SF : — / 14</div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- SECTION 4 — SYNTHÈSE                        -->
+<!-- ════════════════════════════════════════════ -->
+<div class="card s-synthese">
+  <div class="section-title" onclick="toggle(this)">
+    <div class="num">④</div>
+    <h2>Synthèse &amp; Plan d'action</h2>
+    <span class="badge" id="badge-synthese">—</span>
+    <span class="chevron">▾</span>
+  </div>
+  <div class="section-body">
+
+    <div class="synth-grid">
+      <div class="synth-box" id="sbox-gfst" style="background:var(--bleu-clair);border-color:var(--bleu-m);">
+        <div class="tool-name" style="color:var(--bleu-m);">GFST</div>
+        <div class="score-val" id="sv-gfst" style="color:var(--bleu);">—</div>
+        <div class="score-max">/6</div>
+        <div class="interp" id="si-gfst" style="color:var(--bleu);">—</div>
+      </div>
+      <div class="synth-box" id="sbox-sppb" style="background:var(--vert-clair);border-color:var(--vert);">
+        <div class="tool-name" style="color:var(--vert);">SPPB</div>
+        <div class="score-val" id="sv-sppb" style="color:var(--vert);">—</div>
+        <div class="score-max">/12</div>
+        <div class="interp" id="si-sppb" style="color:var(--vert);">—</div>
+      </div>
+      <div class="synth-box" id="sbox-mna" style="background:var(--orange-cl);border-color:var(--orange);">
+        <div class="tool-name" style="color:var(--orange);">MNA-SF</div>
+        <div class="score-val" id="sv-mna" style="color:var(--orange);">—</div>
+        <div class="score-max">/14</div>
+        <div class="interp" id="si-mna" style="color:var(--orange);">—</div>
+      </div>
+    </div>
+
+    <div class="profil-global" id="profil-global" style="background:var(--gris);color:#888;">
+      Complétez les 3 grilles pour obtenir le profil global
+    </div>
+
+    <div style="font-size:13px;font-weight:700;margin-bottom:8px;">Actions à engager</div>
+    <div class="actions-grid">
+      <label class="action-cb" onclick="this.classList.toggle('checked')">
+        <input type="checkbox"> Transmission médecin traitant
+      </label>
+      <label class="action-cb" onclick="this.classList.toggle('checked')">
+        <input type="checkbox"> Signalement IDE / SSIAD
+      </label>
+      <label class="action-cb" onclick="this.classList.toggle('checked')">
+        <input type="checkbox"> Orientation bilan gériatrique (EGS)
+      </label>
+      <label class="action-cb" onclick="this.classList.toggle('checked')">
+        <input type="checkbox"> Adaptation du plan d'aide
+      </label>
+      <label class="action-cb" onclick="this.classList.toggle('checked')">
+        <input type="checkbox"> Saisine diététicienne / MAIA
+      </label>
+      <label class="action-cb" onclick="this.classList.toggle('checked')">
+        <input type="checkbox"> Contact aidant(s)
+      </label>
+      <label class="action-cb" onclick="this.classList.toggle('checked')">
+        <input type="checkbox"> Orientation ergothérapeute (chutes)
+      </label>
+      <label class="action-cb" onclick="this.classList.toggle('checked')">
+        <input type="checkbox"> Suivi dans 1 mois
+      </label>
+    </div>
+
+    <div style="margin-top:12px;">
+      <label style="font-size:13px;font-weight:700;display:block;margin-bottom:6px;">Observations / contexte</label>
+      <textarea id="obs" placeholder="Contexte particulier, remarques cliniques, situation de l'aidant..."></textarea>
+    </div>
+
+    <div style="margin-top:12px;">
+      <label style="font-size:13px;font-weight:700;display:block;margin-bottom:6px;">Prochain bilan prévu</label>
+      <input type="date" id="prochain-bilan" style="padding:8px 10px;border:1.5px solid var(--gris-b);border-radius:7px;font-size:14px;width:100%;">
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="genererSynthese()">📋 Générer synthèse texte</button>
+      <button class="btn btn-print"   onclick="window.print()">🖨 Imprimer</button>
+      <button class="btn btn-reset"   onclick="resetForm()">↺ Réinitialiser</button>
+    </div>
+
+    <div id="synthese-texte" style="display:none;margin-top:14px;padding:14px;background:var(--gris);border-radius:10px;font-size:13px;line-height:1.6;white-space:pre-wrap;font-family:monospace;"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── État global ────────────────────────────────────────────
+const state = {
+  gfst: { pre: null, items: {} },   // items[1..6] = 0|1
+  sppb: { eq1: null, eq2: null, eq3: null, vm: null, lc: null },
+  mna:  { a: null, b: null, c: null, d: null, e: null, f: null, fSrc: null }
+};
+
+// ─── Init date ───────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('date-eval').value = today;
+});
+
+// ─── Accordéon ──────────────────────────────────────────────
+function toggle(el) {
+  el.classList.toggle('open');
+  el.nextElementSibling.classList.toggle('open');
+}
+
+// ─── Toast ──────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ─── OUI / NON générique ────────────────────────────────────
+function setYN(el, key, val) {
+  const wrap = el.parentElement;
+  wrap.querySelectorAll('.yn-btn').forEach(b => b.classList.remove('selected','yes','no'));
+  el.classList.add('selected', val === 'oui' ? 'yes' : 'no');
+  if (key === 'gfst-pre') {
+    state.gfst.pre = val;
+    document.getElementById('gfst-pre-info').style.display = val === 'non' ? 'block' : 'none';
+  }
+}
+
+// ─── GFST ───────────────────────────────────────────────────
+function setGFST(el, num, val) {
+  const wrap = el.parentElement;
+  wrap.querySelectorAll('.yn-btn').forEach(b => b.classList.remove('selected','yes','no'));
+  el.classList.add('selected', val === 1 ? 'yes' : 'no');
+  state.gfst.items[num] = val;
+  updateGFST();
+}
+function updateGFST() {
+  const vals = Object.values(state.gfst.items);
+  if (vals.length < 6) return;
+  const score = vals.reduce((a, b) => a + b, 0);
+  const chip = document.getElementById('score-gfst-chip');
+  chip.textContent = `Score GFST : ${score} / 6`;
+  chip.className = 'score-chip ' + (score >= 4 ? 'alert' : score >= 2 ? 'warn' : 'good');
+  document.getElementById('badge-gfst').textContent = `${score} / 6`;
+  // Mise à jour synthèse
+  document.getElementById('sv-gfst').textContent = score;
+  const interp = score >= 4 ? 'Fragile' : score >= 2 ? 'Pré-fragile' : 'Non fragile';
+  document.getElementById('si-gfst').textContent = interp;
+  updateProfil();
+}
+
+// ─── SPPB — Équilibre ───────────────────────────────────────
+function setSPPB_eq(el, key, val) {
+  const wrap = el.parentElement;
+  wrap.querySelectorAll('.yn-btn').forEach(b => b.classList.remove('selected','yes','no'));
+  el.classList.add('selected', val === 1 ? 'yes' : 'no');
+  state.sppb[key] = val;
+  updateEq();
+}
+function updateEq() {
+  const e = state.sppb;
+  if (e.eq1 === null || e.eq2 === null || e.eq3 === null) return;
+  const score = e.eq1 + e.eq2 + e.eq3;
+  const chip = document.getElementById('score-eq-chip');
+  chip.textContent = `Équilibre : ${score} / 3`;
+  chip.className = 'score-chip ' + (score === 3 ? 'good' : score >= 2 ? 'warn' : 'alert');
+  updateSPPB();
+}
+
+// ─── SPPB — Vitesse de marche ────────────────────────────────
+function calcVM() {
+  const v1 = parseFloat(document.getElementById('vm1').value);
+  const v2 = parseFloat(document.getElementById('vm2').value);
+  if (isNaN(v1) || isNaN(v2)) return;
+  const moy = ((v1 + v2) / 2).toFixed(1);
+  document.getElementById('vm-moy').value = moy;
+  let pts = 0;
+  if (moy < 4.82) pts = 4;
+  else if (moy <= 6.20) pts = 3;
+  else if (moy <= 8.70) pts = 2;
+  else pts = 1;
+  state.sppb.vm = pts;
+  const chip = document.getElementById('score-vm-chip');
+  chip.textContent = `Marche : ${pts} / 4`;
+  chip.className = 'score-chip ' + (pts >= 4 ? 'good' : pts >= 3 ? 'warn' : 'alert');
+  updateSPPB();
+}
+
+// ─── SPPB — Lever de chaise ──────────────────────────────────
+function calcLC() {
+  const impossible = document.getElementById('lc-impossible').checked;
+  if (impossible) {
+    state.sppb.lc = 0;
+    const chip = document.getElementById('score-lc-chip');
+    chip.textContent = 'Lever chaise : 0 / 4';
+    chip.className = 'score-chip alert';
+    updateSPPB();
+    return;
+  }
+  const t = parseFloat(document.getElementById('lc').value);
+  if (isNaN(t)) return;
+  let pts = 0;
+  if (t < 11.2) pts = 4;
+  else if (t <= 13.7) pts = 3;
+  else if (t <= 16.7) pts = 2;
+  else pts = 1;
+  state.sppb.lc = pts;
+  const chip = document.getElementById('score-lc-chip');
+  chip.textContent = `Lever chaise : ${pts} / 4`;
+  chip.className = 'score-chip ' + (pts >= 4 ? 'good' : pts >= 3 ? 'warn' : 'alert');
+  updateSPPB();
+}
+
+function updateSPPB() {
+  const s = state.sppb;
+  if (s.eq1 === null || s.eq2 === null || s.eq3 === null || s.vm === null || s.lc === null) return;
+  const eq = s.eq1 + s.eq2 + s.eq3;
+  const total = eq + s.vm + s.lc;
+  const chip = document.getElementById('score-sppb-chip');
+  chip.textContent = `Score SPPB total : ${total} / 12`;
+  chip.className = 'score-chip ' + (total >= 10 ? 'good' : total >= 7 ? 'warn' : 'alert');
+  document.getElementById('badge-sppb').textContent = `${total} / 12`;
+  document.getElementById('sv-sppb').textContent = total;
+  const interp = total >= 10 ? 'Robuste' : total >= 7 ? 'Pré-fragile' : 'Fragile';
+  document.getElementById('si-sppb').textContent = interp;
+  updateProfil();
+}
+
+// ─── MNA-SF ──────────────────────────────────────────────────
+function selectOpt(el, name, val) {
+  document.querySelectorAll(`[onclick*="'${name}'"]`).forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  const key = name.replace('mna-','');
+  if (!['f1','f2'].includes(key)) {
+    state.mna[key] = val;
+  }
+  updateMNA();
+}
+function setF(src) {
+  state.mna.fSrc = src;
+  updateMNA();
+}
+function calcIMC() {
+  const p = parseFloat(document.getElementById('poids').value);
+  const t = parseFloat(document.getElementById('taille').value) / 100;
+  if (!isNaN(p) && !isNaN(t) && t > 0) {
+    const imc = (p / (t * t)).toFixed(1);
+    document.getElementById('imc-val').value = imc;
+    // Auto-sélection F1
+    const v = parseFloat(imc);
+    let pts = 0;
+    if (v < 19) pts = 0;
+    else if (v <= 21) pts = 1;
+    else if (v <= 23) pts = 2;
+    else pts = 3;
+    // Reset F options
+    document.querySelectorAll(`[onclick*="'mna-f1'"]`).forEach(b => b.classList.remove('selected'));
+    document.querySelectorAll(`[onclick*="'mna-f2'"]`).forEach(b => b.classList.remove('selected'));
+    // Select right F1
+    document.querySelectorAll(`[onclick*="'mna-f1'"]`).forEach(b => {
+      if (b.getAttribute('onclick').includes(`,${pts})`)) b.classList.add('selected');
+    });
+    state.mna.f = pts;
+    state.mna.fSrc = 'f1';
+    updateMNA();
+  }
+}
+function updateMNA() {
+  const m = state.mna;
+  // Récupère F selon source sélectionnée
+  if (m.fSrc === 'f1') {
+    const sel = document.querySelector(`[onclick*="'mna-f1'"].selected`);
+    if (sel) {
+      const match = sel.getAttribute('onclick').match(/selectOpt\(this,'mna-f1',(\d+)\)/);
+      if (match) m.f = parseInt(match[1]);
+    }
+  } else if (m.fSrc === 'f2') {
+    const sel = document.querySelector(`[onclick*="'mna-f2'"].selected`);
+    if (sel) {
+      const match = sel.getAttribute('onclick').match(/selectOpt\(this,'mna-f2',(\d+)\)/);
+      if (match) m.f = parseInt(match[1]);
+    }
+  }
+  const vals = [m.a, m.b, m.c, m.d, m.e, m.f];
+  if (vals.some(v => v === null)) return;
+  const score = vals.reduce((a, b) => a + b, 0);
+  const chip = document.getElementById('score-mna-chip');
+  chip.textContent = `Score MNA-SF : ${score} / 14`;
+  chip.className = 'score-chip ' + (score >= 12 ? 'good' : score >= 8 ? 'warn' : 'alert');
+  document.getElementById('badge-mna').textContent = `${score} / 14`;
+  document.getElementById('sv-mna').textContent = score;
+  const interp = score >= 12 ? 'Normal' : score >= 8 ? 'Risque dénutrition' : 'Dénutrition';
+  document.getElementById('si-mna').textContent = interp;
+  updateProfil();
+}
+
+// ─── Profil global ───────────────────────────────────────────
+function updateProfil() {
+  const gfstScore = parseInt(document.getElementById('sv-gfst').textContent);
+  const sppbScore = parseInt(document.getElementById('sv-sppb').textContent);
+  const mnaScore  = parseInt(document.getElementById('sv-mna').textContent);
+  if (isNaN(gfstScore) || isNaN(sppbScore) || isNaN(mnaScore)) return;
+
+  let niveau = 0;
+  // GFST
+  if (gfstScore >= 4) niveau = Math.max(niveau, 2);
+  else if (gfstScore >= 2) niveau = Math.max(niveau, 1);
+  // SPPB
+  if (sppbScore <= 6) niveau = Math.max(niveau, 2);
+  else if (sppbScore <= 9) niveau = Math.max(niveau, 1);
+  // MNA
+  if (mnaScore <= 7) niveau = Math.max(niveau, 2);
+  else if (mnaScore <= 11) niveau = Math.max(niveau, 1);
+
+  const box = document.getElementById('profil-global');
+  const badge = document.getElementById('badge-synthese');
+  if (niveau === 2) {
+    box.style.background = 'var(--rouge-cl)';
+    box.style.color = 'var(--rouge)';
+    box.textContent = '🔴 PROFIL FRAGILE — Signalement et orientation recommandés';
+    badge.textContent = 'Fragile';
+    badge.style.background = 'var(--rouge-cl)';
+    badge.style.color = 'var(--rouge)';
+  } else if (niveau === 1) {
+    box.style.background = 'var(--orange-cl)';
+    box.style.color = 'var(--orange)';
+    box.textContent = '🟠 PROFIL PRÉ-FRAGILE — Surveillance renforcée';
+    badge.textContent = 'Pré-fragile';
+    badge.style.background = 'var(--orange-cl)';
+    badge.style.color = 'var(--orange)';
+  } else {
+    box.style.background = 'var(--vert-clair)';
+    box.style.color = 'var(--vert)';
+    box.textContent = '🟢 PROFIL ROBUSTE — Maintenir les activités';
+    badge.textContent = 'Robuste';
+    badge.style.background = 'var(--vert-clair)';
+    badge.style.color = 'var(--vert)';
+  }
+}
+
+// ─── Synthèse texte ──────────────────────────────────────────
+function genererSynthese() {
+  const ben  = document.getElementById('beneficiaire').value || '(non renseigné)';
+  const date = document.getElementById('date-eval').value || '(date manquante)';
+  const eval_ = document.getElementById('evaluateur').value || '(non renseigné)';
+  const gir  = document.getElementById('gir').value || '—';
+  const obs  = document.getElementById('obs').value || '—';
+
+  const gfstScore = document.getElementById('sv-gfst').textContent;
+  const sppbScore = document.getElementById('sv-sppb').textContent;
+  const mnaScore  = document.getElementById('sv-mna').textContent;
+  const gfstInterp = document.getElementById('si-gfst').textContent;
+  const sppbInterp = document.getElementById('si-sppb').textContent;
+  const mnaInterp  = document.getElementById('si-mna').textContent;
+  const profil     = document.getElementById('profil-global').textContent;
+
+  const actions = [...document.querySelectorAll('.action-cb input:checked')]
+    .map(cb => '• ' + cb.parentElement.textContent.trim()).join('\n') || '• Aucune cochée';
+
+  const texte =
+`ÉVALUATION FRAGILITÉ — Bien-Autonome
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Bénéficiaire : ${ben}
+Date          : ${date}
+Évaluateur    : ${eval_}
+GIR           : ${gir}
+
+RÉSULTATS
+─────────
+GFST   : ${gfstScore} / 6   → ${gfstInterp}
+SPPB   : ${sppbScore} / 12  → ${sppbInterp}
+MNA-SF : ${mnaScore} / 14  → ${mnaInterp}
+
+${profil}
+
+ACTIONS ENGAGÉES
+─────────────────
+${actions}
+
+OBSERVATIONS
+─────────────
+${obs}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Document confidentiel — à archiver dans le dossier bénéficiaire`;
+
+  const div = document.getElementById('synthese-texte');
+  div.style.display = 'block';
+  div.textContent = texte;
+
+  // Copie presse-papier
+  navigator.clipboard.writeText(texte).then(() => {
+    showToast('✓ Synthèse copiée dans le presse-papier');
+  }).catch(() => {
+    showToast('Synthèse générée — sélectionnez le texte pour copier');
+  });
+}
+
+// ─── Reset ───────────────────────────────────────────────────
+function resetForm() {
+  if (!confirm('Réinitialiser toutes les données ?')) return;
+  location.reload();
+}
+</script>
+</body>
+</html>
